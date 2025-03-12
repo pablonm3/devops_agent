@@ -53,15 +53,15 @@ async def classify_context(text, history):
         raise e
     intents_str = ""
     for intent in intents:
-        intents_str += f"{intent['intent_name']}: {intent['goal']}\n"
+        intents_str += f"<intent><name>{intent['intent_name']}</name><goal>{intent['goal']}</goal></intent>\n"
     
-    SYSTEM_PROMPT = f"""
-You are a devops assistant, given a convesation with a user, predict the latest intent of the user among the following options:
-{intents_str}\n
-Look at the last message in the context of the entire conversation to predict most recent intent.
+    SYSTEM_PROMPT = f"""Given a conversation predict the latest intent of the user.
+Use the latest messages in the context of the conversation to predict most recent intent.
 First think step by step and output the intent between <intent> and </intent> tags.if no match output <intent>NA</intent>
+Choose one of these intents or NA:
+{intents_str}
     """
-    messages = history +[{"role": "user", "content": text}]
+    messages = history +[{"role": "user", "content": text}, {"role": "assistant", "content": "<think>"}]
     r = await call_llm(SYSTEM_PROMPT, messages)
     r = r.content[0].text
     

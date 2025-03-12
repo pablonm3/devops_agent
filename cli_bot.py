@@ -29,6 +29,8 @@ To get started, type your message or use one of these commands:
 /quit - Exit the program
 """
 
+TEST_MODE = False
+
 async def process_user_input(user_input):
     """Process user input and return responses"""
     try:
@@ -46,7 +48,7 @@ async def process_user_input(user_input):
 
         # Process text input
         print("Processing your message...")
-        outputs = await process_text(user_input, test_mode=True)
+        outputs = await process_text(user_input, test_mode=TEST_MODE)
         for output in outputs:
             print(f"\nResponse: {output}\n")
     except ValueError as e:
