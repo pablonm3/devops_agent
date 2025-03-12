@@ -1,0 +1,15 @@
+{
+  "goal": "Reboot the server",
+  "steps": [
+    "Execute the reboot command"
+  ],
+  "context": {
+    "current_directory": "/home/pablo",
+    "requires_sudo": true
+  },
+  "commands": [
+    "sudo reboot"
+  ],
+  "intent_description": "Quickly reboot the server with a single command",
+  "intent_name": "reboot_server"
+}

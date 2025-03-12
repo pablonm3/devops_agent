@@ -1,0 +1,8 @@
+{
+  "goal": "Assist user in the creation of a new task, the edition of an existing task or the deletion of a task",
+  "intent_name": "edit_tasks",
+  "intent_description": "Edit an existing task, create a new task or delete an existing task",
+  "context": {
+    "current_directory": "/home/pablo"
+  }
+}
