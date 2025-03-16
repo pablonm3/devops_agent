@@ -23,9 +23,44 @@ class Agent:
         self.goal = ""
         self.task_file = None
         self.tools = AgentTools(test_mode=self.test_mode)
-        # Load goal and context from tasks/{intent}.json
-        self.load_intent_file(intent)
-        self.system_prompt = """
+        
+        # Check if running in meta mode (intent is None)
+        self.meta_mode = intent is None
+        
+        if self.meta_mode:
+            self.goal = "Help the user with meta tasks like viewing available tasks and providing information"
+            self.task_name = "meta"
+        else:
+            # Load goal and context from tasks/{intent}.json
+            self.load_intent_file(intent)
+            
+        # Select the appropriate system prompt based on mode
+        if self.meta_mode:
+            self.system_prompt = """
+You are an AI assistant that helps users manage their DevOps tasks.
+You're currently running in meta mode, which means you:
+
+1. Respond to small talk and general questions in a friendly, helpful manner
+2. List all available tasks in the tasks directory when asked using the list_tasks tool
+3. Show detailed information about a specific task when asked using the get_task_details tool
+4. Run shell commands to provide information the user asks about using the run_shell tool
+
+When listing tasks, format them in a clear, organized way.
+When describing task details, highlight the goal, context, and commands.
+When the user asks about system information or status, use appropriate shell commands to gather that information.
+
+You can help users:
+- Find and understand existing tasks
+- Get information about the system environment
+- Navigate their available automation options
+- Answer general questions about DevOps concepts
+
+Think step by step about what the user needs based on their input.
+Use the available tools to perform actions as needed.
+Only communicate with the user through the send_message tool.
+"""
+        else:
+            self.system_prompt = """
 You are an AI assistant that helps users manage and execute commands.
 Your goal is: {goal}\n\n
 Current task name: {task_name}\n\n
@@ -93,6 +128,33 @@ Keep commands short, avoid unnecessary commands.
                 }
             }
         ]
+        
+        # Add meta mode specific tools
+        if self.meta_mode:
+            self.tools_spec.append({
+                "name": "list_tasks",
+                "description": "List all available tasks in the tasks directory",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            })
+            
+            self.tools_spec.append({
+                "name": "get_task_details",
+                "description": "Get detailed information about a specific task",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "task_name": {
+                            "type": "string",
+                            "description": "Name of the task to get details for"
+                        }
+                    },
+                    "required": ["task_name"]
+                }
+            })
     
     def load_intent_file(self, intent):
         """
@@ -174,30 +236,31 @@ Keep commands short, avoid unnecessary commands.
             Agent's response message
         """
         
-        # Add the current user message
+        # Format the system prompt based on mode
+        if self.meta_mode:
+            formatted_system_prompt = self.system_prompt
+        else:
+            commands_str = ""
+            if self.commands:
+                commands_str = "Commands to execute:\n"
+                for command in self.commands:
+                    commands_str += f"{command}\n"
+    
+            # Format the system prompt with the current goal and context
+            formatted_system_prompt = self.system_prompt.format(
+                goal=self.goal,
+                task_name=self.task_name,
+                context=json.dumps(self.context, indent=2),
+                commands=commands_str
+            )
         history.append({"role": "user", "content": user_message})
-        
-        commands_str = ""
-        if self.commands:
-            commands_str = "Commands to execute:\n"
-            for command in self.commands:
-                commands_str += f"{command}\n"
-
-        # Format the system prompt with the current goal and context
-        formatted_system_prompt = self.system_prompt.format(
-            goal=self.goal,
-            task_name=self.task_name,
-            context=json.dumps(self.context, indent=2),
-            commands=commands_str
-        )
-        
         # Call the LLM with tools defined
         llm_response = await call_llm(
             system_prompt=formatted_system_prompt,
             messages=history,
             tools=self.tools_spec
         )
-        
+        # Add the current user message
         return llm_response, history
 
     def save_agent_context(self, intent, context):
@@ -259,6 +322,89 @@ Keep commands short, avoid unnecessary commands.
         except Exception as e:
             logger.error(f"Error saving task file: {e}")
             return False
+            
+    async def list_available_tasks(self):
+        """
+        List all available tasks in the tasks directory
+        
+        Returns:
+            String containing list of available tasks with their goals
+        """
+        tasks_dir = "tasks"
+        if not os.path.exists(tasks_dir):
+            return "No tasks directory found."
+        
+        task_files = [f for f in os.listdir(tasks_dir) if f.endswith('.json')]
+        
+        if not task_files:
+            return "No tasks found in tasks directory."
+        
+        result = "Available tasks:\n\n"
+        
+        for task_file in task_files:
+            task_name = task_file.replace('.json', '')
+            try:
+                with open(os.path.join(tasks_dir, task_file), 'r') as f:
+                    task_data = json.load(f)
+                    goal = task_data.get("goal", "No goal specified")
+                    result += f"- {task_name}: {goal}\n"
+            except json.JSONDecodeError:
+                result += f"- {task_name}: [Error: Could not parse task file]\n"
+            except Exception as e:
+                result += f"- {task_name}: [Error: {str(e)}]\n"
+        
+        return result
+    
+    async def get_task_details(self, task_name):
+        """
+        Get detailed information about a specific task
+        
+        Args:
+            task_name: The name of the task to get details for
+            
+        Returns:
+            String containing detailed information about the task
+        """
+        task_file = f"tasks/{task_name}.json"
+        
+        if not os.path.exists(task_file):
+            return f"Task '{task_name}' not found."
+        
+        try:
+            with open(task_file, 'r') as f:
+                task_data = json.load(f)
+                
+            # Format the task details
+            result = f"Task: {task_name}\n\n"
+            
+            # Add goal
+            goal = task_data.get("goal", "No goal specified")
+            result += f"Goal: {goal}\n\n"
+            
+            # Add context if available
+            context = task_data.get("context", {})
+            if context:
+                result += "Context:\n"
+                result += json.dumps(context, indent=2)
+                result += "\n\n"
+            else:
+                result += "Context: No context information available.\n\n"
+            
+            # Add commands if available
+            commands = task_data.get("commands", [])
+            if commands:
+                result += "Commands:\n"
+                for i, cmd in enumerate(commands, 1):
+                    result += f"{i}. {cmd}\n"
+            else:
+                result += "Commands: No commands defined.\n"
+            
+            return result
+            
+        except json.JSONDecodeError:
+            return f"Error: Could not parse task file for '{task_name}'."
+        except Exception as e:
+            return f"Error retrieving task details: {str(e)}"
 
     async def run_agent_loop(self, user_input, history=[]):
         """
@@ -275,11 +421,22 @@ Keep commands short, avoid unnecessary commands.
         max_iterations = 12
         msgs = []
         do_loop = True
+        # Only use the original user input for the first iteration
+        # After that, we'll be processing tool results
+        current_input = user_input
         for it in range(max_iterations):
             if not do_loop:
                 break
             do_loop = False
-            response, history = await self.get_messages(user_input, history)
+            
+            # Only add the user input on the first iteration
+            if it == 0:
+                response, history = await self.get_messages(current_input, history)
+            else:
+                # For subsequent iterations, we're just continuing the conversation
+                # with the tool results that were added to history
+                response, history = await self.get_messages("", history)
+                
             for content in response.content:
                 if content.type == "tool_use":
                     # Convert ToolUseBlock to dictionary
@@ -325,10 +482,40 @@ Keep commands short, avoid unnecessary commands.
                     elif content.name == "update_tasks":
                         action = content.input["action"]
                         task_name = content.input["task_name"]
-                        task_data = content.input["task_data"]
+                        task_data = content.input.get("task_data", {})
                         result = await self.tools.update_tasks(action, task_name, task_data)
                         history.append({"role": "assistant", "content": [content_dict]})
-                        #Tool response is not needed but anthropic requires we alternate between assistant and user roles, so have to add something to end with human role
+                        tool_response = {
+                            "role": "user",
+                            "content": [
+                                {
+                                "type": "tool_result",
+                                "tool_use_id": content.id,
+                                "content": result
+                                }
+                            ]
+                        }
+                        history.append(tool_response)
+                        do_loop = True
+                    elif content.name == "list_tasks":
+                        result = await self.list_available_tasks()
+                        history.append({"role": "assistant", "content": [content_dict]})
+                        tool_response = {
+                            "role": "user",
+                            "content": [
+                                {
+                                "type": "tool_result",
+                                "tool_use_id": content.id,
+                                "content": result
+                                }
+                            ]
+                        }
+                        history.append(tool_response)
+                        do_loop = True
+                    elif content.name == "get_task_details":
+                        task_name = content.input["task_name"]
+                        result = await self.get_task_details(task_name)
+                        history.append({"role": "assistant", "content": [content_dict]})
                         tool_response = {
                             "role": "user",
                             "content": [

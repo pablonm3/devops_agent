@@ -98,10 +98,6 @@ async def process_text(text, test_mode=False):
     
     # Get classification for the user input
     classification = await classify_context(text, history)
-
-    if classification is None:
-        logger.info("No intent found, returning generic response")
-        return ["Intent not identified, I'm your devops assistant, ask me to create, edit or remove a devops task or to execute an existing devops task"]
     
     # Initialize agent with the classified intent as goal
     agent = Agent(intent=classification, test_mode=test_mode)
