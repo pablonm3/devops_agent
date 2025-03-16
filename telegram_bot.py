@@ -3,6 +3,7 @@ import os
 import telebot
 from telebot.async_telebot import AsyncTeleBot
 import asyncio
+import json
 from telebot import types
 from telebot.util import quick_markup
 import logging
@@ -21,17 +22,23 @@ from services import get_transcription, process_text  # import after load_dotenv
 telebot.logger.setLevel(logging.DEBUG) # Outputs debug messages to console.
 
 BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
+TELEGRAM_USER_ID = os.environ.get('TELEGRAM_USER_ID')
 logger.info(f"Bot token: {BOT_TOKEN}")
 
-bot = AsyncTeleBot(BOT_TOKEN, parse_mode="Markdown")
+bot = AsyncTeleBot(BOT_TOKEN)
 remove_btns_markup = types.ReplyKeyboardRemove(selective=False)
 START_MESSAGE = """Hi! To get started send audio notes or text messages.
 """
 
-CRON_INTERVAL = int(os.environ.get('CRON_INTERVAL'))
-
 async def process_message(message):
     chat_id = message.chat.id
+    user_id = str(message.from_user.id)
+    if user_id != TELEGRAM_USER_ID:
+        # Only authorized user can use this bot, to prevent hackers from accessing your server and LLM calls.
+        user_details = f"User ID: {message.from_user.id}, Username: {message.from_user.username}, First Name: {message.from_user.first_name}, Last Name: {message.from_user.last_name}"
+        logger.error(f"User is not authorized to use this bot, user details: {user_details}")
+        await bot.send_message(TELEGRAM_USER_ID, f"SOMEONE NOT AUTHORIZED IS TRYING TO USE THE BOT, USER INFORMATION: {user_details}", reply_markup=remove_btns_markup)
+        return
     await bot.send_chat_action(chat_id, "typing")
     if message.content_type in ['voice', 'audio']:
         if message.content_type == 'voice':

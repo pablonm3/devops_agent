@@ -350,6 +350,8 @@ Keep commands short, avoid unnecessary commands.
                     # add text to history to keep alternate between assistant and user roles, else thing crashes
                     #history.append({"role": "assistant", "content": [content_dict]})
                     logger.info("received text response: " + content.text)
+        if it == max_iterations - 1:
+            logger.info("max iterations reached, loop stopped while running")
         if history and history[-1]["role"] == "user":
             # always finish with assistant message to prevent 2 user messages in a row(crashes anthropic)
             history.append({"role": "assistant", "content": [{"type":"text", "text":"waiting for more messages"}]})

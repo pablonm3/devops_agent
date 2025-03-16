@@ -53,7 +53,7 @@ async def classify_context(text, history):
         raise e
     intents_str = ""
     for intent in intents:
-        intents_str += f"<intent><name>{intent['intent_name']}</name><goal>{intent['goal']}</goal></intent>\n"
+        intents_str += f"<task><intent>{intent['intent_name']}</intent><goal>{intent['goal']}</goal></task>\n"
     
     SYSTEM_PROMPT = f"""Given a conversation predict the latest intent of the user.
 Use the latest messages in the context of the conversation to predict most recent intent.
