@@ -92,7 +92,7 @@ Keep commands short, avoid unnecessary commands.
             },
             {
                 "name": "run_shell",
-                "description": "Run a bash command and return the output",
+                "description": "Run a bash command and return the output. This tool is stateless so if you change directory with \"cd\" command the change only applies to this invocation, further invocations start from the same initial state",
                 "input_schema": {
                     "type": "object",
                     "properties": {
