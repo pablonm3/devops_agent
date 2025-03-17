@@ -464,6 +464,8 @@ Keep commands short, avoid unnecessary commands.
                         history.append(tool_response)
                     elif content.name == "run_shell":
                         command = content.input["command"]
+                        # Add debug log message to msgs, but not to history
+                        msgs.append(f"[DEBUG LOG] RUNNING SHELL COMMAND: {command}")
                         history.append({"role": "assistant", "content": [content_dict]})
                         output = await self.tools.run_shell(command)
                         #Tool response is not needed but anthropic requires we alternate between assistant and user roles, so have to add something to end with human role
