@@ -435,7 +435,7 @@ Keep commands short, avoid unnecessary commands.
             else:
                 # For subsequent iterations, we're just continuing the conversation
                 # with the tool results that were added to history
-                response, history = await self.get_messages("", history)
+                response, history = await self.get_messages("Next action:", history)
                 
             for content in response.content:
                 if content.type == "tool_use":
