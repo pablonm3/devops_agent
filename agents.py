@@ -531,6 +531,7 @@ Keep commands short, avoid unnecessary commands.
                         history.append(tool_response)
                         do_loop = True
                 elif content.type == "text":
+                    msgs.append(content.text) # send text as msg to user. ideally should not need this but LLM sometimes forgets to use send_message tool.
                     # Convert text content to dictionary
                     content_dict = {
                         "type": content.type,
