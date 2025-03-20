@@ -531,6 +531,7 @@ Keep commands short, avoid unnecessary commands.
                         history.append(tool_response)
                         do_loop = True
                 elif content.type == "text":
+                    #FIXME: in the history we should save this as a send_message tool call to steer the LLM in future iterations, else will be reinforcing this bad behavior
                     msgs.append(content.text) # send text as msg to user. ideally should not need this but LLM sometimes forgets to use send_message tool.
                     # Convert text content to dictionary
                     content_dict = {
@@ -538,7 +539,7 @@ Keep commands short, avoid unnecessary commands.
                         "text": content.text
                     }
                     # add text to history to keep alternate between assistant and user roles, else thing crashes
-                    #history.append({"role": "assistant", "content": [content_dict]})
+                    history.append({"role": "assistant", "content": [content_dict]})
                     logger.info("received text response: " + content.text)
         if it == max_iterations - 1:
             logger.info("max iterations reached, loop stopped while running")
