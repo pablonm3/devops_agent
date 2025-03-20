@@ -42,8 +42,16 @@ async def call_llm(system_prompt, messages, model=None, tools=None):
     if tools:
         params["tools"] = tools
     
-    # Call the Anthropic API
-    response = await async_llm.messages.create(**params)
+    # Call the Anthropic API with retry logic
+    import time
+    try:
+        response = await async_llm.messages.create(**params)
+    except Exception as e:
+        logger.error(f"Error calling Anthropic API: {str(e)}")
+        logger.info("Waiting 10 seconds before retrying...")
+        time.sleep(10)
+        # Retry once after waiting
+        response = await async_llm.messages.create(**params)
     
     # Return the response directly - no custom transformation needed
     # The Anthropic response object already has a content attribute
