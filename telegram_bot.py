@@ -75,6 +75,6 @@ async def handle_all(message):
 
 logging.info("Telegram bot is running...")
 
-asyncio.run(bot.polling(request_timeout=30))
+asyncio.run(bot.polling(request_timeout=50))
 
 
