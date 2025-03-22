@@ -11,6 +11,12 @@ A powerful DevOps assistant that allows you to control your Mac or Linux machine
 - 🔒 Secure access limited to authorized Telegram user ID
 - 🧠 Powered by Claude AI (Anthropic) for natural language understanding
 
+## Demo
+
+Watch the video demonstration:
+
+[![DevOps Agent Demo](https://img.youtube.com/vi/ElWG1wArY5I/0.jpg)](https://youtu.be/ElWG1wArY5I)
+
 ## Requirements
 
 - Python 3.10+
